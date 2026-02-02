@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts
+server.exe
+server
+*.exe
+
+# Environment
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Firestore credentials
+*service-account*.json
+
+# Internal docs
+project_flow.md
