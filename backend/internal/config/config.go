@@ -16,6 +16,7 @@ type Config struct {
 	GCPProjectID         string
 	FirestoreCredentials string
 	MLServiceURL         string
+	FrontendURL          string
 	Environment          string
 }
 
@@ -34,6 +35,7 @@ func Load() *Config {
 		GCPProjectID:         getEnv("GCP_PROJECT_ID", ""),
 		FirestoreCredentials: getEnv("FIRESTORE_CREDENTIALS", ""),
 		MLServiceURL:         getEnv("ML_SERVICE_URL", "http://localhost:8000"),
+		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
 		Environment:          getEnv("ENVIRONMENT", "development"),
 	}
 

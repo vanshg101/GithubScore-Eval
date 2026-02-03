@@ -1,24 +1,35 @@
 package router
 
 import (
+	"github.com/Madhur/GithubScoreEval/backend/internal/config"
 	"github.com/Madhur/GithubScoreEval/backend/internal/handler"
 	"github.com/Madhur/GithubScoreEval/backend/internal/middleware"
+	"github.com/Madhur/GithubScoreEval/backend/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
-func Setup() *gin.Engine {
+func Setup(cfg *config.Config, userStore *store.UserStore) *gin.Engine {
 	router := gin.New()
 
-	// Global middleware
 	router.Use(middleware.Logger())
 	router.Use(middleware.CORS())
 	router.Use(gin.Recovery())
 
-	// Health check
 	healthHandler := handler.NewHealthHandler()
 	router.GET("/health", healthHandler.HealthCheck)
 
+	authHandler := handler.NewAuthHandler(cfg, userStore)
+	authGroup := router.Group("/auth")
+	{
+		authGroup.GET("/github/login", authHandler.GitHubLogin)
+		authGroup.GET("/github/callback", authHandler.GitHubCallback)
+		authGroup.POST("/logout", authHandler.Logout)
+	}
 
+	authGroup.Use(middleware.AuthRequired(cfg.JWTSecret))
+	{
+		authGroup.GET("/me", authHandler.GetCurrentUser)
+	}
 
 	return router
 }
