@@ -4,11 +4,11 @@ import (
 	"github.com/Madhur/GithubScoreEval/backend/internal/config"
 	"github.com/Madhur/GithubScoreEval/backend/internal/handler"
 	"github.com/Madhur/GithubScoreEval/backend/internal/middleware"
-	"github.com/Madhur/GithubScoreEval/backend/internal/store"
+	"github.com/Madhur/GithubScoreEval/backend/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(cfg *config.Config, userStore *store.UserStore) *gin.Engine {
+func Setup(cfg *config.Config, userRepo repository.UserRepository) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware.Logger())
@@ -18,7 +18,7 @@ func Setup(cfg *config.Config, userStore *store.UserStore) *gin.Engine {
 	healthHandler := handler.NewHealthHandler()
 	router.GET("/health", healthHandler.HealthCheck)
 
-	authHandler := handler.NewAuthHandler(cfg, userStore)
+	authHandler := handler.NewAuthHandler(cfg, userRepo)
 	authGroup := router.Group("/auth")
 	{
 		authGroup.GET("/github/login", authHandler.GitHubLogin)

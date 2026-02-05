@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -11,21 +12,21 @@ import (
 	"github.com/Madhur/GithubScoreEval/backend/internal/auth"
 	"github.com/Madhur/GithubScoreEval/backend/internal/config"
 	"github.com/Madhur/GithubScoreEval/backend/internal/model"
-	"github.com/Madhur/GithubScoreEval/backend/internal/store"
+	"github.com/Madhur/GithubScoreEval/backend/internal/repository"
 	"github.com/gin-gonic/gin"
 )
 
 const jwtExpiry = 7 * 24 * time.Hour
 
 type AuthHandler struct {
-	cfg       *config.Config
-	userStore *store.UserStore
+	cfg      *config.Config
+	userRepo repository.UserRepository
 }
 
-func NewAuthHandler(cfg *config.Config, userStore *store.UserStore) *AuthHandler {
+func NewAuthHandler(cfg *config.Config, userRepo repository.UserRepository) *AuthHandler {
 	return &AuthHandler{
-		cfg:       cfg,
-		userStore: userStore,
+		cfg:      cfg,
+		userRepo: userRepo,
 	}
 }
 
@@ -63,15 +64,16 @@ func (h *AuthHandler) GitHubCallback(c *gin.Context) {
 
 	userID := fmt.Sprintf("%d", ghUser.ID)
 	now := time.Now()
+	ctx := context.Background()
 
-	existing, _ := h.userStore.GetByID(userID)
+	existing, _ := h.userRepo.GetByID(ctx, userID)
 	if existing != nil {
 		existing.AccessToken = tokenResp.AccessToken
 		existing.LastLoginAt = now
 		existing.DisplayName = ghUser.Name
 		existing.AvatarURL = ghUser.AvatarURL
 		existing.Email = ghUser.Email
-		h.userStore.Save(existing)
+		h.userRepo.Save(ctx, existing)
 	} else {
 		user := &model.User{
 			ID:          userID,
@@ -84,7 +86,7 @@ func (h *AuthHandler) GitHubCallback(c *gin.Context) {
 			CreatedAt:   now,
 			LastLoginAt: now,
 		}
-		h.userStore.Save(user)
+		h.userRepo.Save(ctx, user)
 	}
 
 	jwtToken, err := auth.GenerateToken(userID, ghUser.Login, h.cfg.JWTSecret, jwtExpiry)
@@ -106,7 +108,7 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userStore.GetByID(userID.(string))
+	user, err := h.userRepo.GetByID(context.Background(), userID.(string))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
