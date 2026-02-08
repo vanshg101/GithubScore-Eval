@@ -31,3 +31,4 @@ docker-compose.override.yml
 
 # Internal docs
 project_flow.md
+backend/github-score-eval-eb16d2dd3723.json
