@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *service.DeveloperService) *gin.Engine {
+func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *service.DeveloperService, scoringService *service.ScoringService) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware.Logger())
@@ -33,12 +33,15 @@ func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *s
 	}
 
 	devHandler := handler.NewDeveloperHandler(devService, userRepo)
+	scoreHandler := handler.NewScoreHandler(scoringService)
 	api := router.Group("/api")
 	api.Use(middleware.AuthRequired(cfg.JWTSecret))
 	{
 		api.GET("/developers", devHandler.ListDevelopers)
 		api.GET("/developers/:username", devHandler.GetDeveloper)
 		api.POST("/developers/:username/fetch", devHandler.FetchDeveloper)
+		api.POST("/developers/:username/score", scoreHandler.ComputeScore)
+		api.GET("/developers/:username/score", scoreHandler.GetScore)
 	}
 
 	return router

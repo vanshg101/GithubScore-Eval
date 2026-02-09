@@ -1,4 +1,4 @@
-okpackage github
+package github
 
 import (
 	"log"
