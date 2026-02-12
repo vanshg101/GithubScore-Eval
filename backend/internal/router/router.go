@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *service.DeveloperService, scoringService *service.ScoringService) *gin.Engine {
+func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *service.DeveloperService, scoringService *service.ScoringService, rankingService *service.RankingService) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware.Logger())
@@ -34,6 +34,7 @@ func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *s
 
 	devHandler := handler.NewDeveloperHandler(devService, userRepo)
 	scoreHandler := handler.NewScoreHandler(scoringService)
+	rankingHandler := handler.NewRankingHandler(rankingService, userRepo)
 	api := router.Group("/api")
 	api.Use(middleware.AuthRequired(cfg.JWTSecret))
 	{
@@ -42,6 +43,9 @@ func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *s
 		api.POST("/developers/:username/fetch", devHandler.FetchDeveloper)
 		api.POST("/developers/:username/score", scoreHandler.ComputeScore)
 		api.GET("/developers/:username/score", scoreHandler.GetScore)
+		api.POST("/compare", rankingHandler.CompareDevelopers)
+		api.GET("/orgs/:org/evaluate", rankingHandler.EvaluateOrg)
+		api.GET("/rankings", rankingHandler.GetLeaderboard)
 	}
 
 	return router
