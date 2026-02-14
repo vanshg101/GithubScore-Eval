@@ -8,6 +8,7 @@ import (
 	"time"
 
 	gh "github.com/Madhur/GithubScoreEval/backend/internal/github"
+	"github.com/Madhur/GithubScoreEval/backend/internal/mlclient"
 	"github.com/Madhur/GithubScoreEval/backend/internal/model"
 	"github.com/Madhur/GithubScoreEval/backend/internal/repository"
 	"github.com/Madhur/GithubScoreEval/backend/internal/scoring"
@@ -21,6 +22,7 @@ type RankingService struct {
 	userRepo    repository.UserRepository
 	engine      *scoring.Engine
 	ghClient    *gh.Client
+	mlClient    *mlclient.Client
 }
 
 // NewRankingService creates a new RankingService.
@@ -30,6 +32,7 @@ func NewRankingService(
 	rankingRepo repository.RankingRepository,
 	userRepo repository.UserRepository,
 	ghClient *gh.Client,
+	mlClient *mlclient.Client,
 ) *RankingService {
 	return &RankingService{
 		devRepo:     devRepo,
@@ -38,6 +41,7 @@ func NewRankingService(
 		userRepo:    userRepo,
 		engine:      scoring.NewEngine(),
 		ghClient:    ghClient,
+		mlClient:    mlClient,
 	}
 }
 
@@ -67,6 +71,18 @@ func (s *RankingService) BulkScore(ctx context.Context, usernames []string, acce
 		}
 
 		score := s.engine.Compute(username, &dev.Metrics)
+
+		// Call ML service for impact prediction (with fallback)
+		if s.mlClient != nil {
+			req := mlclient.MapMetrics(&dev.Metrics)
+			mlScore, mlErr := s.mlClient.Predict(ctx, req)
+			if mlErr != nil {
+				log.Printf("ML prediction failed for %s (using fallback): %v", username, mlErr)
+			} else {
+				score.MLImpactScore = mlScore
+			}
+		}
+
 		if err := s.scoreRepo.Save(ctx, score); err != nil {
 			log.Printf("Failed to save score for %s: %v", username, err)
 			continue
@@ -171,6 +187,7 @@ func buildRanking(scores []*model.Score) *model.Ranking {
 			Rank:     rank,
 			Username: sc.Username,
 			Score:    sc.WeightedScore,
+			MLScore:  sc.MLImpactScore,
 		}
 	}
 

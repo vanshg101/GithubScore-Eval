@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/Madhur/GithubScoreEval/backend/internal/model"
 	"github.com/Madhur/GithubScoreEval/backend/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -26,12 +27,7 @@ func (h *ScoreHandler) ComputeScore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"username":         score.Username,
-		"weighted_score":   score.WeightedScore,
-		"indicator_scores": score.IndicatorScores,
-		"computed_at":      score.ComputedAt,
-	})
+	c.JSON(http.StatusOK, scoreToJSON(score))
 }
 
 // GetScore retrieves the stored score for a developer.
@@ -45,10 +41,17 @@ func (h *ScoreHandler) GetScore(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, scoreToJSON(score))
+}
+
+// scoreToJSON builds a consistent JSON response for a score.
+func scoreToJSON(score *model.Score) gin.H {
+	return gin.H{
 		"username":         score.Username,
 		"weighted_score":   score.WeightedScore,
+		"ml_impact_score":  score.MLImpactScore,
 		"indicator_scores": score.IndicatorScores,
+		"percentile":       score.Percentile,
 		"computed_at":      score.ComputedAt,
-	})
+	}
 }
