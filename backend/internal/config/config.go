@@ -18,6 +18,8 @@ type Config struct {
 	MLServiceURL         string
 	FrontendURL          string
 	Environment          string
+	CronSchedule         string
+	CronRefreshHours     string
 }
 
 func Load() *Config {
@@ -37,6 +39,8 @@ func Load() *Config {
 		MLServiceURL:         getEnv("ML_SERVICE_URL", "http://localhost:8000"),
 		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:3000"),
 		Environment:          getEnv("ENVIRONMENT", "development"),
+		CronSchedule:         getEnv("CRON_SCHEDULE", "0 */6 * * *"),
+		CronRefreshHours:     getEnv("CRON_REFRESH_HOURS", "6"),
 	}
 
 	return cfg
