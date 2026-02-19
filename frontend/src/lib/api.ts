@@ -1,5 +1,76 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+// ---- Types ----
+
+export interface DeveloperProfile {
+  name: string;
+  bio: string;
+  public_repos: number;
+  followers: number;
+  avatar_url: string;
+}
+
+export interface DeveloperMetrics {
+  total_commits: number;
+  total_prs: number;
+  merged_prs: number;
+  total_issues_opened: number;
+  total_issues_closed: number;
+  review_comments: number;
+  active_weeks: number;
+  repos_contributed: number;
+  total_stars: number;
+  total_forks: number;
+  avg_pr_lines_changed: number;
+  avg_issue_response_hours: number;
+  commit_trend: string;
+  languages: string[];
+}
+
+export interface Developer {
+  username: string;
+  profile: DeveloperProfile;
+  metrics: DeveloperMetrics;
+  fetched_at: string;
+}
+
+export interface IndicatorScore {
+  raw: number;
+  normalized: number;
+  weighted: number;
+}
+
+export interface Score {
+  username: string;
+  weighted_score: number;
+  ml_impact_score: number;
+  indicator_scores: Record<string, IndicatorScore>;
+  percentile: number;
+  computed_at: string;
+}
+
+export interface RankEntry {
+  rank: number;
+  username: string;
+  score: number;
+  ml_score: number;
+}
+
+export interface Ranking {
+  snapshot_date: string;
+  rankings: RankEntry[];
+  total_developers: number;
+  created_at: string;
+}
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string;
+  email: string;
+}
+
 interface RequestOptions {
   method?: string;
   body?: unknown;
@@ -61,13 +132,7 @@ class ApiClient {
   }
 
   async getCurrentUser() {
-    return this.request<{
-      id: string;
-      username: string;
-      display_name: string;
-      avatar_url: string;
-      email: string;
-    }>("/auth/me");
+    return this.request<AuthUser>("/auth/me");
   }
 
   async logout() {
@@ -76,52 +141,52 @@ class ApiClient {
 
   // ---- Developers ----
   async fetchDeveloper(username: string) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Developer>(
       `/api/developers/${username}/fetch`,
       { method: "POST" }
     );
   }
 
   async getDeveloper(username: string) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Developer>(
       `/api/developers/${username}`
     );
   }
 
   async listDevelopers() {
-    return this.request<Record<string, unknown>[]>("/api/developers");
+    return this.request<Developer[]>("/api/developers");
   }
 
   // ---- Scoring ----
   async computeScore(username: string) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Score>(
       `/api/developers/${username}/score`,
       { method: "POST" }
     );
   }
 
   async getScore(username: string) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Score>(
       `/api/developers/${username}/score`
     );
   }
 
   // ---- Ranking ----
   async compareDevelopers(usernames: string[]) {
-    return this.request<Record<string, unknown>>("/api/compare", {
+    return this.request<Ranking>("/api/compare", {
       method: "POST",
       body: { usernames },
     });
   }
 
   async evaluateOrg(org: string) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Ranking>(
       `/api/orgs/${org}/evaluate`
     );
   }
 
   async getRankings(page = 1, pageSize = 20) {
-    return this.request<Record<string, unknown>>(
+    return this.request<Ranking>(
       `/api/rankings?page=${page}&page_size=${pageSize}`
     );
   }

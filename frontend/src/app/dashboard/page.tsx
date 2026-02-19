@@ -3,6 +3,9 @@
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SearchBar } from "@/components/SearchBar";
+import { Search, Trophy, GitCompareArrows, Building2 } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -37,25 +40,33 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        <SearchBar className="mb-8" />
+
         {/* Quick stats cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <DashCard
             title="Search Developer"
-            description="Look up any GitHub user by username to view their contribution score."
+            description="Look up any GitHub user to view their score."
             href="/search"
-            action="Search →"
+            icon={<Search className="h-5 w-5" />}
           />
           <DashCard
             title="Leaderboard"
-            description="View the ranked leaderboard of all scored developers."
+            description="View the ranked leaderboard of scored developers."
             href="/leaderboard"
-            action="View Rankings →"
+            icon={<Trophy className="h-5 w-5" />}
           />
           <DashCard
             title="Compare"
-            description="Compare 2–10 developers side by side with scoring breakdown."
+            description="Compare 2–10 developers side by side."
             href="/compare"
-            action="Compare →"
+            icon={<GitCompareArrows className="h-5 w-5" />}
+          />
+          <DashCard
+            title="Organizations"
+            description="Evaluate all members of a GitHub org."
+            href="/org"
+            icon={<Building2 className="h-5 w-5" />}
           />
         </div>
       </div>
@@ -67,27 +78,27 @@ function DashCard({
   title,
   description,
   href,
-  action,
+  icon,
 }: {
   title: string;
   description: string;
   href: string;
-  action: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <a
+    <Link
       href={href}
-      className="group rounded-xl border border-zinc-200 bg-white p-6 transition-all hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+      className="group rounded-xl border border-zinc-200 bg-white p-5 transition-all hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
     >
-      <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+        {icon}
+      </div>
+      <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
         {title}
       </h2>
-      <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
         {description}
       </p>
-      <span className="mt-4 inline-block text-sm font-medium text-zinc-900 group-hover:underline dark:text-white">
-        {action}
-      </span>
-    </a>
+    </Link>
   );
 }
