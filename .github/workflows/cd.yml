@@ -1,0 +1,206 @@
+name: CD — Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  GAR_REGISTRY: us-central1-docker.pkg.dev
+  GAR_REPOSITORY: ghscore
+
+jobs:
+  # ── Build & Push Images to Artifact Registry ───────────────
+  build-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      backend-image: ${{ steps.meta.outputs.backend-image }}
+      ml-image: ${{ steps.meta.outputs.ml-image }}
+      frontend-image: ${{ steps.meta.outputs.frontend-image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GAR_REGISTRY }} --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate image tags
+        id: meta
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | head -c 7)
+          echo "backend-image=${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/backend:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "ml-image=${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/ml-service:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend-image=${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/frontend:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.backend-image }}
+            ${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push ML service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./ml-service
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.ml-image }}
+            ${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/ml-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.frontend-image }}
+            ${{ env.GAR_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.GAR_REPOSITORY }}/frontend:latest
+          build-args: NEXT_PUBLIC_API_URL=${{ secrets.BACKEND_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy to Cloud Run ────────────────────────────────────
+  deploy-ml:
+    name: Deploy ML Service
+    runs-on: ubuntu-latest
+    needs: build-push
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ghscore-ml
+          region: ${{ env.GCP_REGION }}
+          image: ${{ needs.build-push.outputs.ml-image }}
+          flags: |
+            --port=8000
+            --memory=1Gi
+            --cpu=1
+            --min-instances=0
+            --max-instances=3
+            --allow-unauthenticated
+
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: [build-push, deploy-ml]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ghscore-backend
+          region: ${{ env.GCP_REGION }}
+          image: ${{ needs.build-push.outputs.backend-image }}
+          flags: |
+            --port=8080
+            --memory=512Mi
+            --cpu=1
+            --min-instances=0
+            --max-instances=5
+            --allow-unauthenticated
+          env_vars: |
+            ML_SERVICE_URL=${{ secrets.ML_SERVICE_URL }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            GITHUB_CLIENT_ID=${{ secrets.GH_OAUTH_CLIENT_ID }}
+            GITHUB_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          secrets: |
+            GOOGLE_APPLICATION_CREDENTIALS=ghscore-firestore-key:latest
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: [build-push, deploy-backend]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ghscore-frontend
+          region: ${{ env.GCP_REGION }}
+          image: ${{ needs.build-push.outputs.frontend-image }}
+          flags: |
+            --port=3000
+            --memory=256Mi
+            --cpu=1
+            --min-instances=0
+            --max-instances=3
+            --allow-unauthenticated
+          env_vars: |
+            NEXT_PUBLIC_API_URL=${{ secrets.BACKEND_URL }}
+
+  # ── Smoke Test ──────────────────────────────────────────────
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend, deploy-ml]
+    steps:
+      - name: Health checks
+        run: |
+          echo "Waiting 30s for services to stabilize..."
+          sleep 30
+
+          echo "=== ML Service ==="
+          curl -sf "${{ secrets.ML_SERVICE_URL }}/health" || (echo "ML health check failed" && exit 1)
+
+          echo "=== Backend ==="
+          curl -sf "${{ secrets.BACKEND_URL }}/health" || (echo "Backend health check failed" && exit 1)
+
+          echo "=== Frontend ==="
+          curl -sf "${{ secrets.FRONTEND_URL }}" || (echo "Frontend health check failed" && exit 1)
+
+          echo "All services healthy!"

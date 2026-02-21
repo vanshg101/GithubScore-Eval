@@ -1,0 +1,24 @@
+# Binaries
+server
+server.exe
+*.exe
+
+# Environment
+.env
+.env.local
+
+# Credentials (mounted at runtime, not baked into image)
+*.json
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

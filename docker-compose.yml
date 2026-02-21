@@ -1,10 +1,9 @@
-version: "3.8"
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: ghscore-backend
     ports:
       - "8080:8080"
     env_file:
@@ -12,32 +11,62 @@ services:
     environment:
       - PORT=8080
       - ML_SERVICE_URL=http://ml-service:8000
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend/github-score-eval-eb16d2dd3723.json:/app/github-score-eval-eb16d2dd3723.json:ro
     depends_on:
-      - ml-service
+      ml-service:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
   ml-service:
     build:
       context: ./ml-service
       dockerfile: Dockerfile
+    container_name: ghscore-ml
     ports:
       - "8000:8000"
+    restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    container_name: ghscore-frontend
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8080
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
 networks:
   app-network:
