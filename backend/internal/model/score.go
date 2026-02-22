@@ -12,7 +12,7 @@ type Score struct {
 	Username        string                    `json:"username" firestore:"username"`
 	WeightedScore   float64                   `json:"weighted_score" firestore:"weighted_score"`
 	MLImpactScore   float64                   `json:"ml_impact_score" firestore:"ml_impact_score"`
-	IndicatorScores map[string]IndicatorScore  `json:"indicator_scores" firestore:"indicator_scores"`
+	IndicatorScores map[string]IndicatorScore `json:"indicator_scores" firestore:"indicator_scores"`
 	Percentile      float64                   `json:"percentile" firestore:"percentile"`
 	ComputedAt      time.Time                 `json:"computed_at" firestore:"computed_at"`
 }

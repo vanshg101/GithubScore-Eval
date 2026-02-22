@@ -7,8 +7,12 @@ import joblib
 import numpy as np
 from typing import Optional
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "impact_model.pkl")
-SCALER_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models", "scaler.pkl")
+MODEL_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "trained_models", "impact_model.pkl"
+)
+SCALER_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "trained_models", "scaler.pkl"
+)
 
 
 class ModelLoader:

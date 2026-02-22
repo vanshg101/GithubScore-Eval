@@ -16,8 +16,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const jwtExpiry = 7 * 24 * time.Hour
+const jwtExpiry = 7 * 24 * time.Hour // JWT tokens are valid for 7 days
 
+// AuthHandler manages GitHub OAuth login/callback, JWT issuance, and logout.
 type AuthHandler struct {
 	cfg      *config.Config
 	userRepo repository.UserRepository

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RankingHandler handles developer comparisons, org evaluations, and leaderboard queries.
 type RankingHandler struct {
 	rankingService *service.RankingService
 	userRepo       repository.UserRepository

@@ -68,6 +68,7 @@ class TestModelPrediction:
     def _load_model(self):
         try:
             from app.model.loader import ModelLoader
+
             self.model = ModelLoader.get_instance()
         except FileNotFoundError:
             pytest.skip("Trained model not available")
@@ -78,25 +79,45 @@ class TestModelPrediction:
         assert 0 <= score <= 100
 
     def test_zero_activity_low_score(self):
-        features = DeveloperFeatures(**_sample_features(
-            total_commits=0, total_prs=0, merged_prs=0,
-            total_issues_opened=0, total_issues_closed=0,
-            review_comments=0, active_weeks=0, repos_contributed=0,
-            total_stars=0, total_forks=0, avg_pr_lines_changed=0,
-            avg_issue_response_hours=0, commit_trend_score=0.2,
-            language_count=0,
-        ))
+        features = DeveloperFeatures(
+            **_sample_features(
+                total_commits=0,
+                total_prs=0,
+                merged_prs=0,
+                total_issues_opened=0,
+                total_issues_closed=0,
+                review_comments=0,
+                active_weeks=0,
+                repos_contributed=0,
+                total_stars=0,
+                total_forks=0,
+                avg_pr_lines_changed=0,
+                avg_issue_response_hours=0,
+                commit_trend_score=0.2,
+                language_count=0,
+            )
+        )
         score = self.model.predict(features.to_feature_list())
         assert score < 35  # very low activity should score low
 
     def test_high_activity_high_score(self):
-        features = DeveloperFeatures(**_sample_features(
-            total_commits=500, total_prs=100, merged_prs=90,
-            total_issues_opened=50, total_issues_closed=45,
-            review_comments=100, active_weeks=48, repos_contributed=20,
-            total_stars=200, total_forks=50, avg_pr_lines_changed=200,
-            avg_issue_response_hours=6, commit_trend_score=1.0,
-            language_count=10,
-        ))
+        features = DeveloperFeatures(
+            **_sample_features(
+                total_commits=500,
+                total_prs=100,
+                merged_prs=90,
+                total_issues_opened=50,
+                total_issues_closed=45,
+                review_comments=100,
+                active_weeks=48,
+                repos_contributed=20,
+                total_stars=200,
+                total_forks=50,
+                avg_pr_lines_changed=200,
+                avg_issue_response_hours=6,
+                commit_trend_score=1.0,
+                language_count=10,
+            )
+        )
         score = self.model.predict(features.to_feature_list())
         assert score > 60  # high activity should score high

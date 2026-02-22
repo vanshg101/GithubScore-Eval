@@ -1,0 +1,567 @@
+openapi: 3.0.3
+info:
+  title: GitHub Score Eval — Backend API
+  description: |
+    REST API for the GitHub Contribution Scoring & Developer Evaluation System.
+    Evaluates developers across 12 weighted indicators and predicts impact using ML.
+  version: 1.0.0
+  contact:
+    name: Vansh Gupta
+    url: https://github.com/vanshg101/GithubScoreEval
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://ghscore-backend-xxxxx-uc.a.run.app
+    description: Production (Cloud Run)
+
+tags:
+  - name: Health
+    description: Service health check
+  - name: Auth
+    description: GitHub OAuth authentication
+  - name: Developers
+    description: Developer data fetching & retrieval
+  - name: Scoring
+    description: Score computation & retrieval
+  - name: Rankings
+    description: Leaderboard, comparison, and organization evaluation
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: github-score-eval-backend
+
+  /auth/github/login:
+    get:
+      tags: [Auth]
+      summary: Redirect to GitHub OAuth
+      operationId: githubLogin
+      description: Generates an OAuth state, sets a cookie, and redirects to GitHub's authorization page.
+      responses:
+        "307":
+          description: Redirect to GitHub OAuth consent screen
+
+  /auth/github/callback:
+    get:
+      tags: [Auth]
+      summary: GitHub OAuth callback
+      operationId: githubCallback
+      description: |
+        Exchanges the authorization code for an access token, fetches the GitHub user,
+        creates/updates the user in Firestore, generates a JWT, and redirects to the frontend.
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "307":
+          description: Redirect to frontend with JWT token
+        "400":
+          description: Invalid OAuth state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      operationId: logout
+      description: Clears auth cookies.
+      responses:
+        "200":
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: logged out
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: getCurrentUser
+      description: Returns the authenticated user's profile.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/developers:
+    get:
+      tags: [Developers]
+      summary: List all developers
+      operationId: listDevelopers
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Array of developers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Developer"
+
+  /api/developers/{username}:
+    get:
+      tags: [Developers]
+      summary: Get developer by username
+      operationId: getDeveloper
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Developer data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Developer"
+        "404":
+          description: Developer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/developers/{username}/fetch:
+    post:
+      tags: [Developers]
+      summary: Fetch developer from GitHub
+      operationId: fetchDeveloper
+      description: Fetches the developer's profile and metrics from the GitHub API and stores them in Firestore.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Fetched developer data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Developer"
+        "500":
+          description: Failed to fetch from GitHub
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/developers/{username}/score:
+    post:
+      tags: [Scoring]
+      summary: Compute score for developer
+      operationId: computeScore
+      description: |
+        Computes a weighted score across 12 indicators and calls the ML service
+        for an impact prediction. Stores the result in Firestore.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Computed score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Score"
+        "500":
+          description: Computation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      tags: [Scoring]
+      summary: Get stored score
+      operationId: getScore
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Stored score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Score"
+        "404":
+          description: Score not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/compare:
+    post:
+      tags: [Rankings]
+      summary: Compare developers
+      operationId: compareDevelopers
+      description: Compare 2–10 developers side-by-side. Auto-fetches and scores missing developers.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [usernames]
+              properties:
+                usernames:
+                  type: array
+                  minItems: 2
+                  maxItems: 10
+                  items:
+                    type: string
+                  example: ["torvalds", "gvanrossum", "dhh"]
+      responses:
+        "200":
+          description: Comparison ranking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ranking"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/orgs/{org}/evaluate:
+    get:
+      tags: [Rankings]
+      summary: Evaluate organization
+      operationId: evaluateOrg
+      description: Fetches all public members of a GitHub organization, scores them, and returns a ranking.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: org
+          in: path
+          required: true
+          description: GitHub organization name
+          schema:
+            type: string
+          example: google
+      responses:
+        "200":
+          description: Organization ranking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ranking"
+        "400":
+          description: Missing org name
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/rankings:
+    get:
+      tags: [Rankings]
+      summary: Get leaderboard
+      operationId: getLeaderboard
+      description: Paginated global leaderboard of all scored developers.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Results per page
+      responses:
+        "200":
+          description: Paginated ranking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ranking"
+        "404":
+          description: No rankings found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from GitHub OAuth callback
+
+  parameters:
+    Username:
+      name: username
+      in: path
+      required: true
+      description: GitHub username
+      schema:
+        type: string
+      example: torvalds
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "developer not found"
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "174860757"
+        username:
+          type: string
+          example: vanshg101
+        display_name:
+          type: string
+          example: Vansh Gupta
+        avatar_url:
+          type: string
+          format: uri
+          example: https://avatars.githubusercontent.com/u/174860757
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+
+    DeveloperProfile:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Linus Torvalds
+        bio:
+          type: string
+        public_repos:
+          type: integer
+          example: 7
+        followers:
+          type: integer
+          example: 200000
+        avatar_url:
+          type: string
+          format: uri
+
+    DeveloperMetrics:
+      type: object
+      properties:
+        total_commits:
+          type: integer
+          example: 350
+        total_prs:
+          type: integer
+          example: 120
+        merged_prs:
+          type: integer
+          example: 95
+        total_issues_opened:
+          type: integer
+          example: 40
+        total_issues_closed:
+          type: integer
+          example: 35
+        review_comments:
+          type: integer
+          example: 80
+        active_weeks:
+          type: integer
+          example: 45
+        repos_contributed:
+          type: integer
+          example: 12
+        total_stars:
+          type: integer
+          example: 150
+        total_forks:
+          type: integer
+          example: 30
+        avg_pr_lines_changed:
+          type: number
+          format: float
+          example: 185.5
+        avg_issue_response_hours:
+          type: number
+          format: float
+          example: 12.3
+        commit_trend:
+          type: string
+          enum: [increasing, stable, decreasing]
+          example: increasing
+        languages:
+          type: object
+          additionalProperties:
+            type: integer
+          example: { "Go": 45, "Python": 30, "TypeScript": 25 }
+
+    Developer:
+      type: object
+      properties:
+        username:
+          type: string
+          example: torvalds
+        profile:
+          $ref: "#/components/schemas/DeveloperProfile"
+        metrics:
+          $ref: "#/components/schemas/DeveloperMetrics"
+        fetched_at:
+          type: string
+          format: date-time
+
+    IndicatorScore:
+      type: object
+      properties:
+        raw:
+          type: number
+          format: float
+          example: 350
+        normalized:
+          type: number
+          format: float
+          example: 0.7
+        weighted:
+          type: number
+          format: float
+          example: 10.5
+
+    Score:
+      type: object
+      properties:
+        username:
+          type: string
+          example: torvalds
+        weighted_score:
+          type: number
+          format: float
+          example: 78.5
+        ml_impact_score:
+          type: number
+          format: float
+          example: 82.3
+        indicator_scores:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/IndicatorScore"
+          example:
+            total_commits:
+              raw: 350
+              normalized: 0.7
+              weighted: 10.5
+            pr_merge_rate:
+              raw: 0.79
+              normalized: 0.79
+              weighted: 9.5
+        percentile:
+          type: number
+          format: float
+          example: 92.5
+        computed_at:
+          type: string
+          format: date-time
+
+    RankEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: torvalds
+        score:
+          type: number
+          format: float
+          example: 78.5
+        ml_score:
+          type: number
+          format: float
+          example: 82.3
+
+    Ranking:
+      type: object
+      properties:
+        snapshot_date:
+          type: string
+          example: "2026-03-05"
+        rankings:
+          type: array
+          items:
+            $ref: "#/components/schemas/RankEntry"
+        total_developers:
+          type: integer
+          example: 150
+        created_at:
+          type: string
+          format: date-time

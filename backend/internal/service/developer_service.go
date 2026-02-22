@@ -11,8 +11,8 @@ import (
 )
 
 type DeveloperService struct {
-	ghClient  *gh.Client
-	devRepo   repository.DeveloperRepository
+	ghClient *gh.Client
+	devRepo  repository.DeveloperRepository
 }
 
 func NewDeveloperService(ghClient *gh.Client, devRepo repository.DeveloperRepository) *DeveloperService {

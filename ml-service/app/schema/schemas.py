@@ -15,10 +15,16 @@ class DeveloperFeatures(BaseModel):
     repos_contributed: int = Field(..., ge=0, description="Repos contributed to")
     total_stars: int = Field(..., ge=0, description="Stars across owned repos")
     total_forks: int = Field(..., ge=0, description="Forks across owned repos")
-    avg_pr_lines_changed: float = Field(..., ge=0, description="Avg lines changed per PR")
-    avg_issue_response_hours: float = Field(..., ge=0, description="Avg hours to first response")
+    avg_pr_lines_changed: float = Field(
+        ..., ge=0, description="Avg lines changed per PR"
+    )
+    avg_issue_response_hours: float = Field(
+        ..., ge=0, description="Avg hours to first response"
+    )
     commit_trend_score: float = Field(
-        ..., ge=0, le=1,
+        ...,
+        ge=0,
+        le=1,
         description="Commit trend: 1.0=increasing, 0.5=stable, 0.2=decreasing",
     )
     language_count: int = Field(..., ge=0, description="Number of languages used")

@@ -1,3 +1,4 @@
+// Package router defines the HTTP routing table for the backend API.
 package router
 
 import (
@@ -9,6 +10,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Setup creates and returns a fully configured Gin engine with all routes,
+// middleware (Logger, CORS, Recovery, AuthRequired), and handler registrations.
+// Route groups:
+//   - /health        — public liveness check
+//   - /auth/*        — OAuth login/callback (public) + /me (authenticated)
+//   - /api/*         — all endpoints require JWT authentication
 func Setup(cfg *config.Config, userRepo repository.UserRepository, devService *service.DeveloperService, scoringService *service.ScoringService, rankingService *service.RankingService) *gin.Engine {
 	router := gin.New()
 

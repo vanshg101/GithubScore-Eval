@@ -46,7 +46,9 @@ def _generate_row(rng: random.Random) -> dict:
     total_prs = rng.randint(0, 200)
     merged_prs = rng.randint(0, total_prs) if total_prs > 0 else 0
     total_issues_opened = rng.randint(0, 150)
-    total_issues_closed = rng.randint(0, total_issues_opened) if total_issues_opened > 0 else 0
+    total_issues_closed = (
+        rng.randint(0, total_issues_opened) if total_issues_opened > 0 else 0
+    )
     review_comments = rng.randint(0, 200)
     active_weeks = rng.randint(0, 52)
     repos_contributed = rng.randint(0, 40)
@@ -60,7 +62,9 @@ def _generate_row(rng: random.Random) -> dict:
     # --- label: weighted impact formula ---
     commit_norm = min(total_commits / 500, 1.0)
     pr_merge_rate = merged_prs / total_prs if total_prs > 0 else 0
-    issue_ratio = total_issues_closed / total_issues_opened if total_issues_opened > 0 else 0
+    issue_ratio = (
+        total_issues_closed / total_issues_opened if total_issues_opened > 0 else 0
+    )
     review_norm = min(review_comments / 100, 1.0)
     consistency = active_weeks / 52
     repo_norm = min(repos_contributed / 20, 1.0)

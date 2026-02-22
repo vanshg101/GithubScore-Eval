@@ -59,25 +59,44 @@ class TestPredictEndpoint:
         assert resp.status_code == 422
 
     def test_predict_high_activity(self):
-        resp = client.post("/predict", json=_sample_payload(
-            total_commits=500, total_prs=100, merged_prs=90,
-            active_weeks=48, repos_contributed=20, total_stars=200,
-            commit_trend_score=1.0, language_count=10,
-        ))
+        resp = client.post(
+            "/predict",
+            json=_sample_payload(
+                total_commits=500,
+                total_prs=100,
+                merged_prs=90,
+                active_weeks=48,
+                repos_contributed=20,
+                total_stars=200,
+                commit_trend_score=1.0,
+                language_count=10,
+            ),
+        )
         if resp.status_code == 503:
             pytest.skip("Model not trained yet")
         assert resp.status_code == 200
         assert resp.json()["impact_score"] > 50
 
     def test_predict_zero_activity(self):
-        resp = client.post("/predict", json=_sample_payload(
-            total_commits=0, total_prs=0, merged_prs=0,
-            total_issues_opened=0, total_issues_closed=0,
-            review_comments=0, active_weeks=0, repos_contributed=0,
-            total_stars=0, total_forks=0, avg_pr_lines_changed=0,
-            avg_issue_response_hours=0, commit_trend_score=0.2,
-            language_count=0,
-        ))
+        resp = client.post(
+            "/predict",
+            json=_sample_payload(
+                total_commits=0,
+                total_prs=0,
+                merged_prs=0,
+                total_issues_opened=0,
+                total_issues_closed=0,
+                review_comments=0,
+                active_weeks=0,
+                repos_contributed=0,
+                total_stars=0,
+                total_forks=0,
+                avg_pr_lines_changed=0,
+                avg_issue_response_hours=0,
+                commit_trend_score=0.2,
+                language_count=0,
+            ),
+        )
         if resp.status_code == 503:
             pytest.skip("Model not trained yet")
         assert resp.status_code == 200

@@ -38,7 +38,9 @@ FEATURE_COLUMNS = [
 
 LABEL_COLUMN = "impact_score"
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "training_data.csv")
+DATA_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "..", "data", "training_data.csv"
+)
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "trained_models")
 MODEL_PATH = os.path.join(MODEL_DIR, "impact_model.pkl")
 SCALER_PATH = os.path.join(MODEL_DIR, "scaler.pkl")
@@ -78,7 +80,9 @@ def train():
 
     # Feature importances (coefficients)
     print("\n--- Feature Coefficients ---")
-    for name, coef in sorted(zip(FEATURE_COLUMNS, model.coef_), key=lambda x: abs(x[1]), reverse=True):
+    for name, coef in sorted(
+        zip(FEATURE_COLUMNS, model.coef_), key=lambda x: abs(x[1]), reverse=True
+    ):
         print(f"  {name:30s} {coef:+.4f}")
 
     # Save model + scaler

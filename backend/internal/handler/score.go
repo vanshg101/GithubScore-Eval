@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ScoreHandler handles score computation and retrieval for individual developers.
 type ScoreHandler struct {
 	scoringService *service.ScoringService
 }

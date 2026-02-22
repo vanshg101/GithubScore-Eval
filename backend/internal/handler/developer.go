@@ -9,6 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DeveloperHandler handles fetching developer profiles from GitHub
+// and retrieving stored developer data from Firestore.
 type DeveloperHandler struct {
 	devService *service.DeveloperService
 	userRepo   repository.UserRepository

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// HealthHandler provides a simple liveness/readiness check endpoint.
 type HealthHandler struct{}
 
 func NewHealthHandler() *HealthHandler {

@@ -7,13 +7,13 @@ import (
 )
 
 type PullRequest struct {
-	Number    int       `json:"number"`
-	Title     string    `json:"title"`
-	State     string    `json:"state"`
-	CreatedAt time.Time `json:"created_at"`
+	Number    int        `json:"number"`
+	Title     string     `json:"title"`
+	State     string     `json:"state"`
+	CreatedAt time.Time  `json:"created_at"`
 	MergedAt  *time.Time `json:"merged_at"`
-	Additions int       `json:"additions"`
-	Deletions int       `json:"deletions"`
+	Additions int        `json:"additions"`
+	Deletions int        `json:"deletions"`
 	User      struct {
 		Login string `json:"login"`
 	} `json:"user"`

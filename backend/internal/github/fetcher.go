@@ -9,11 +9,11 @@ import (
 )
 
 type RepoData struct {
-	Repo     Repository
-	Commits  []Commit
-	PRs      []PullRequest
-	Issues   []Issue
-	Reviews  []ReviewComment
+	Repo    Repository
+	Commits []Commit
+	PRs     []PullRequest
+	Issues  []Issue
+	Reviews []ReviewComment
 }
 
 func (c *Client) FetchDeveloperData(username string) (*model.Developer, error) {
