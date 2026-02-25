@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import type { Ranking, Score } from "@/lib/api";
-import { PageLoading, ErrorState, EmptyState } from "@/components/StateDisplays";
+import { PageLoading, EmptyState } from "@/components/StateDisplays";
 import { ComparisonOverlayChart } from "@/components/charts";
 import { GitCompareArrows, X, Plus } from "lucide-react";
 
