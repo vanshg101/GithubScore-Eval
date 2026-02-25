@@ -1,9 +1,10 @@
 name: CD — Deploy to Cloud Run
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:  # manual trigger only — requires GCP secrets to be configured
+  # Uncomment below after setting up GCP billing + secrets:
+  # push:
+  #   branches: [main]
 
 concurrency:
   group: deploy-${{ github.ref }}
